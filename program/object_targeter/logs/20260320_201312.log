@@ -1,0 +1,4 @@
+2026-03-20 20:13:14,581 [INFO] Resolution: 1920.0x1080.0, Screen: 1920x1080
+2026-03-20 20:13:16,584 [INFO] SerialWriter Loop started
+2026-03-20 20:13:21,259 [INFO] Classes changed: ['бутылка', 'телефон', 'наушники', 'карандаш'] in 4.20s
+2026-03-20 20:13:46,413 [INFO] SerialWriter stopped
