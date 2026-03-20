@@ -7,7 +7,7 @@ from serialwriter import SerialWriter
 from selector import ObjectSelector
 from zoom import ZoomController
 from preprocessor import Preprocessor
-from logs import Logger
+from program.object_targeter.logger import Logger
 from smooth import SmoothingFilter
 import numpy as np
 import tkinter as tk

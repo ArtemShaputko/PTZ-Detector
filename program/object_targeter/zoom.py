@@ -1,6 +1,6 @@
 import threading
 import cv2
-from logs import Logger
+from program.object_targeter.logger import Logger
 
 class ZoomController:
     def __init__(self, logger: Logger | None = None, min_zoom=1.0, max_zoom=5.0, step=0.5):

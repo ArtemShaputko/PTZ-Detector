@@ -2,7 +2,7 @@ import threading
 import time
 import serial
 from utils import get_distance
-from logs import Logger
+from program.object_targeter.logger import Logger
 
 class SerialWriter:
     def __init__(self, logger: Logger | None = None, min_distance_to_send = 30):

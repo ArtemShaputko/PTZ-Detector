@@ -3,7 +3,7 @@ from ultralytics.utils.plotting import Colors
 import argostranslate.translate as translate
 from model_names import en_model_names
 import time
-from logs import Logger
+from program.object_targeter.logger import Logger
 
 
 class Names:

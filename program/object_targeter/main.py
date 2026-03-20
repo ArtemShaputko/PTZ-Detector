@@ -6,7 +6,7 @@ from zoom import ZoomController
 from preprocessor import Preprocessor
 from audiorecorder import AudioRecorder
 from video_analyze import VideoAnalyzer
-from logs import Logger
+from program.object_targeter.logger import Logger
 
 class Platform:
     def __init__(self):

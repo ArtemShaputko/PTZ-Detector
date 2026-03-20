@@ -1,3 +1,4 @@
 vosk-model*
 *.pt
 *.wav
+logs

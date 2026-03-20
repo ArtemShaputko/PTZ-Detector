@@ -8,7 +8,7 @@ import time
 from names import Names
 from zoom import ZoomController
 from commands import CommandParser, CommandType
-from logs import Logger
+from program.object_targeter.logger import Logger
 
 class AudioRecorder:
     def __init__(self, names: Names, zoom: ZoomController, logger: Logger | None = None, model_name = "vosk-model-small-ru-0.22", fs = 44100):
