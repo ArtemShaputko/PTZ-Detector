@@ -36,6 +36,5 @@ class ObjectSelector:
         coords = self.select_best(results) if type == 'best' else self.select_first(results)
         if coords is None:
             return None
-        cx, cy = self.__zoom.to_original_coords(coords[0], coords[1],
-                                                self.__width, self.__height)
+        cx, cy = self.__zoom.to_original_coords(coords[0], coords[1])
         return (self.__width - cx, cy)

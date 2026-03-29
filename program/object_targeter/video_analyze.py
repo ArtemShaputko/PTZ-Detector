@@ -7,7 +7,7 @@ from serialwriter import SerialWriter
 from selector import ObjectSelector
 from zoom import ZoomController
 from preprocessor import Preprocessor
-from program.object_targeter.logger import Logger
+from logger import Logger
 from smooth import SmoothingFilter
 import numpy as np
 import tkinter as tk
@@ -74,7 +74,7 @@ class VideoAnalyzer:
                  preprocessor: Preprocessor | None = None,
                  logger: Logger | None = None,
                  model_name = "yolov8m-worldv2.pt",
-                 size = (1920, 1080), conf_score = 0.1):
+                 size = (1280, 720), conf_score = 0.1):
         self.__names = names
         self.__serial_writer = serial_writer
         self.__selector = ObjectSelector(size[0], size[1], zoom)
@@ -97,7 +97,7 @@ class VideoAnalyzer:
         self.__screen_h = root.winfo_screenheight()
         root.destroy()
 
-        self.__cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+        self.__cap = cv2.VideoCapture(2, cv2.CAP_V4L2)
         self.__cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.__cap.set(cv2.CAP_PROP_FRAME_WIDTH, size[0])
         self.__cap.set(cv2.CAP_PROP_FRAME_HEIGHT, size[1])
@@ -129,7 +129,6 @@ class VideoAnalyzer:
         total_frames = 0
         record_start_time = time.time()
         
-                # Окно
         cv2.namedWindow("Tracking", cv2.WINDOW_NORMAL)
         cv2.setWindowProperty("Tracking", cv2.WND_PROP_FULLSCREEN,
                               cv2.WINDOW_FULLSCREEN)
@@ -142,14 +141,15 @@ class VideoAnalyzer:
             classes_names = self.__set_classes()
 
             frame = self.__zoom.apply(frame)
+            
             preprocessed = frame
             if self.__preprocessor:
-                preprocessed = self.__preprocessor.apply(frame)
+               preprocessed = self.__preprocessor.apply(frame)
 
             results = self.__model.track(preprocessed, persist=True,
                                          verbose=False, conf=self.__conf_score)
 
-            frame = self.__overlay.draw(frame, results, classes_names, self.__zoom.get_zoom(),
+            frame = self.__overlay.draw(frame, results, classes_names, self.__zoom.zoom /10,
                                         target_idx=0,
                                         colors_fn=self.__names.colors)
 
@@ -157,15 +157,15 @@ class VideoAnalyzer:
             coords = self.__smoother.update(coords)
 
             if coords:
-                self.__serial_writer.set_coords(coords)
-                if self.__logger:
-                    self.__logger.info(f"Coords: {coords}")
+                self.__logger.trace(f"Video sends coords: {coords}")
+                self.__serial_writer.coords = coords
+                
+            coords = None
 
-            # Вписываем в экран с сохранением соотношения сторон
-            display = self.__overlay.fit_to_screen(frame,
+            frame = self.__overlay.fit_to_screen(frame,
                                                    self.__screen_w,
                                                    self.__screen_h)
-            cv2.imshow("Tracking", display)
+            cv2.imshow("Tracking", frame)
             cv2.waitKey(1)
 
             total_frames += 1

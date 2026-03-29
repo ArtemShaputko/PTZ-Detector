@@ -1,40 +1,57 @@
 import threading
 import cv2
-from program.object_targeter.logger import Logger
+from serialwriter import SerialWriter
+from logger import Logger
 
 class ZoomController:
-    def __init__(self, logger: Logger | None = None, min_zoom=1.0, max_zoom=5.0, step=0.5):
-        self.__zoom = 1.0
-        self.__min = min_zoom
-        self.__max = max_zoom
-        self.__step = step
+    def __init__(self, writer: SerialWriter, size, logger: Logger | None = None, min_zoom=1.0, max_zoom=5.0, step=0.5):
+        self.__zoom = 10
+        self.__init_size = size
+        self.__cropped_size = size
+        self.__min = int(10*min_zoom)
+        self.__max = int(10*max_zoom)
+        self.__step = int(step*10)
+        self.__writer = writer
         self.__lock = threading.Lock()
         
         self.__logger = logger
+        
+    def __update_cropped_size(self):
+        if self.__zoom == 10:
+            return
+        float_zoom = self.__zoom / 10 
+        w, h = self.__init_size
+        self.__cropped_size = (int(w / float_zoom), int(h / float_zoom))
+        self.__writer.update_notsend_zone_by_size(self.__cropped_size)
 
     def zoom_in(self):
         with self.__lock:
             self.__zoom = min(self.__zoom + self.__step, self.__max)
             if self.__logger:
-                self.__logger.info(f"[Zoom] приблизить → x{self.__zoom:.1f}")
+                self.__logger.info(f"[Zoom] приблизить → x{(self.__zoom/10):.1f}")
+            self.__update_cropped_size()
 
     def zoom_out(self):
         with self.__lock:
             self.__zoom = max(self.__zoom - self.__step, self.__min)
             if self.__logger:
-                self.__logger.info(f"[Zoom] удалить → x{self.__zoom:.1f}")
+                self.__logger.info(f"[Zoom] удалить → x{(self.__zoom/10):.1f}")
+            self.__update_cropped_size()
 
-    def get_zoom(self):
+    @property
+    def zoom(self):
         with self.__lock:
             return self.__zoom
 
-    def apply(self, frame):
-        zoom = self.get_zoom()
-        if zoom == 1.0:
-            return frame
+    def get_state(self):
+        with self.__lock:
+            return self.__zoom, self.__cropped_size
 
-        h, w = frame.shape[:2]
-        new_h, new_w = int(h / zoom), int(w / zoom)
+    def apply(self, frame):
+        _, cropped_size = self.get_state()
+        w, h = self.__init_size
+        
+        new_w, new_h = cropped_size
 
         y1 = (h - new_h) // 2
         x1 = (w - new_w) // 2
@@ -42,16 +59,19 @@ class ZoomController:
 
         return cv2.resize(cropped, (w, h))
     
-    def to_original_coords(self, cx: int, cy: int, orig_w: int, orig_h: int) -> tuple[int, int]:
-        zoom = self.get_zoom()
-        if zoom == 1.0:
+    def to_original_coords(self, cx: int, cy: int) -> tuple[int, int]:
+        zoom, cropped_size = self.get_state()
+        if zoom == 10:
             return cx, cy
-
-        crop_w, crop_h = int(orig_w / zoom), int(orig_h / zoom)
-
+        
+        float_zoom = zoom / 10
+        
+        orig_w, orig_h = self.__init_size
+        crop_w, crop_h = cropped_size
+        
         offset_x = (orig_w - crop_w) // 2
         offset_y = (orig_h - crop_h) // 2
 
-        orig_cx = int(cx / zoom) + offset_x
-        orig_cy = int(cy / zoom) + offset_y
+        orig_cx = int(cx / float_zoom) + offset_x
+        orig_cy = int(cy / float_zoom) + offset_y
         return orig_cx, orig_cy

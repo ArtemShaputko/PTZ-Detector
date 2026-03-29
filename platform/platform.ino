@@ -2,8 +2,8 @@
 
 constexpr char DELIMITER     = ':';
 constexpr int  OBJECT_ZONE   = 3;
-constexpr int  MOVE_INTERVAL = 25;
-constexpr int  MAX_STEP      = 5;
+constexpr int  MOVE_INTERVAL = 50;
+constexpr int  MAX_STEP      = 4;
 
 // ─── Pair ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ public:
         int diff = _target - _current;
         if (abs(diff) <= OBJECT_ZONE) return false;
 
-        int s = clamp(diff / 4, -MAX_STEP, MAX_STEP);
+        int s = clamp(diff / 8, -MAX_STEP, MAX_STEP);
         if (s == 0) s = (diff > 0) ? 1 : -1;
 
         _current = clamp(_current + s, 0, 180);
@@ -102,7 +102,7 @@ public:
     CameraTracker()
         : _horizontal(HORIZONTAL_PIN),
           _vertical(VERTICAL_PIN),
-          _calculator({58, 33}, {1920, 1080}),
+          _calculator({58, 33}, {1280, 720}),
           _last_move(0) {}
 
     void setup() {
@@ -121,8 +121,8 @@ public:
 
         unsigned long now = millis();
         if (now - _last_move >= MOVE_INTERVAL) {
-            bool moved = _horizontal.step() | _vertical.step();
-            if (moved) _last_move = now;
+            _horizontal.step() | _vertical.step();
+            _last_move = now;
         }
     }
 

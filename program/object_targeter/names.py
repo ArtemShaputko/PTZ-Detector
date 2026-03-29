@@ -3,7 +3,7 @@ from ultralytics.utils.plotting import Colors
 import argostranslate.translate as translate
 from model_names import en_model_names
 import time
-from program.object_targeter.logger import Logger
+from logger import Logger
 
 
 class Names:
@@ -11,7 +11,7 @@ class Names:
         self.translater = translate.get_translation_from_codes(from_code="ru", to_code="en")
         self.colors = Colors()
         self.updated = True
-        self.current = {"бутылка": "bottle", "телефон": "phone", "наушники": "headphones", "карандаш": "pencil"}
+        self.current = {"": ""}
         self.to_work = True
         self.lock = threading.Lock()
         self.work_lock = threading.Lock()
