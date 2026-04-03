@@ -7,12 +7,13 @@ from preprocessor import Preprocessor
 from audiorecorder import AudioRecorder
 from video_analyze import VideoAnalyzer
 from logger import Logger
+import logging
 
 class Platform:
     def __init__(self, size: tuple[int, int]):
         SetLogLevel(-1)
         self.__size = size
-        self.__logger = Logger()
+        self.__logger = Logger(level=logging.INFO)
         self.__names = Names(logger = self.__logger)
         self.__writer = SerialWriter(logger = self.__logger, size=self.__size)
         self.__zoom = ZoomController(writer= self.__writer, logger = self.__logger, min_zoom=1.0, max_zoom=5.0, step=0.5, size = self.__size)

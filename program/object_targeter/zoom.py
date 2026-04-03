@@ -18,8 +18,10 @@ class ZoomController:
         
     def __update_cropped_size(self):
         if self.__zoom == 10:
+            self.__cropped_size = self.__init_size
+            self.__writer.update_notsend_zone_by_size(self.__cropped_size)
             return
-        float_zoom = self.__zoom / 10 
+        float_zoom = self.__zoom / 10
         w, h = self.__init_size
         self.__cropped_size = (int(w / float_zoom), int(h / float_zoom))
         self.__writer.update_notsend_zone_by_size(self.__cropped_size)
