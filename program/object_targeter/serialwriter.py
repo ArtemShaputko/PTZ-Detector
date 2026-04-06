@@ -3,9 +3,12 @@ import time
 import serial
 from utils import get_distance, is_in_ellipse
 from logger import Logger
+from threadmanager import ThreadManager
 
-class SerialWriter:
+class SerialWriter(ThreadManager):
     def __init__(self, logger: Logger | None = None, size = (1920, 1080), notsend_zone_factor = 0.04):
+        super().__init__()
+        
         self.__ser = serial.Serial('/dev/ttyUSB0', 115200)
         self.__size = size
         self.__screen_center = (size[0] // 2, size[1] // 2)
@@ -46,7 +49,7 @@ class SerialWriter:
         with self.__lock:
             self.__coords = coords
     
-    def write_loop(self):
+    def start(self):
         if self.__logger:
             self.__logger.info('SerialWriter Loop started')
         

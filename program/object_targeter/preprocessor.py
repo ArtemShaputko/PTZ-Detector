@@ -14,7 +14,7 @@ class Preprocessor:
         self.__bilateral_sigma = bilateral_sigma
         self.__clahe = cv2.createCLAHE(clipLimit=clahe_clip,
                                         tileGridSize=clahe_grid)
-
+        
     def apply(self, frame):
         if self.__use_bilateral:
             frame = cv2.bilateralFilter(frame, self.__bilateral_d,
@@ -25,5 +25,5 @@ class Preprocessor:
             l, a, b = cv2.split(lab)
             l = self.__clahe.apply(l)
             frame = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
-
+            
         return frame

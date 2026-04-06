@@ -1,22 +1,35 @@
 import torch
-from zoom import ZoomController
+import threading
+from ultralytics.engine.results import Results, Boxes
 
 class ObjectSelector:
-    def __init__(self, width: int, height: int, zoom: ZoomController):
-        self.__width = width
-        self.__height = height
-        self.__zoom = zoom
+    def __init__(self):
+        self.__lock = threading.Lock
+        self.__target_class: int | None = None
         
-    def select_best(self, results) -> tuple[int, int] | None:
+    @property
+    def target_class(self):
+        with self.__lock:
+            return self.__target_class
+        
+    @staticmethod
+    def is_target(boxes: Boxes, target: int | None) -> bool:
+        return boxes.is_track and target is not None and boxes.id == target
+        
+    def select_best(self, results: Results, target: int | None) -> tuple[int, int] | None:
         best_box = None
         best_conf = -1
+        
+        result = results[0]
 
-        for result in results:
-            for i in range(len(result)):
-                conf = result.boxes.conf[i].item()
-                if conf > best_conf:
-                    best_conf = conf
-                    best_box = result.boxes.xyxy[i]
+        for i in range(len(result)):
+            if self.is_target(result.boxes, target):
+                best_box = result.boxes.xyxy[i]
+                break
+            conf = result.boxes.conf[i].item()
+            if conf > best_conf:
+                best_conf = conf
+                best_box = result.boxes.xyxy[i]
 
         if best_box is None:
             return None
@@ -36,5 +49,4 @@ class ObjectSelector:
         coords = self.select_best(results) if type == 'best' else self.select_first(results)
         if coords is None:
             return None
-        cx, cy = self.__zoom.to_original_coords(coords[0], coords[1])
-        return (self.__width - cx, cy)
+        return coords

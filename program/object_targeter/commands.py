@@ -5,10 +5,12 @@ from enum import Enum, auto
 class CommandType(Enum):
     ZOOM_IN  = auto()
     ZOOM_OUT = auto()
-    PLACE    = auto()  # заменить объект
-    ADD      = auto()  # добавить объект
+    PLACE    = auto()
+    ADD      = auto()
+    SWITCH   = auto()
     EXIT     = auto()
     UNKNOWN  = auto()
+    CONF     = auto()
 
 
 @dataclass
@@ -23,6 +25,8 @@ class CommandParser:
     __EXIT     = ["выйти", "выход", "стоп"]
     __PLACE    = ["найти", "найди", "поиск"]
     __ADD      = ["добавить", "добавь"]
+    __CONF      = ["уверенность", "уверен"]
+    __SWITCH   = ["переключить", "переключи"]
 
     def parse(self, text: str, to_add: bool = False) -> Command:
         text = text.strip().lower()
@@ -42,7 +46,15 @@ class CommandParser:
         for w in self.__ADD:
             if text.startswith(w):
                 return Command(CommandType.ADD, text=text[len(w):].strip())
+            
+        for w in self.__SWITCH:
+            if text.startswith(w):
+                return Command(CommandType.SWITCH, text=text[len(w):].strip())
 
+        for w in self.__CONF:
+            if text.startswith(w):
+                return Command(CommandType.CONF, text=text[len(w):].strip())
+            
         if text:
             return Command(CommandType.ADD if to_add else CommandType.PLACE, text=text)
 

@@ -1,32 +1,40 @@
 import threading
 from vosk import SetLogLevel
-from names import Names
+from config import WorkConfigManager
 from serialwriter import SerialWriter
 from zoom import ZoomController
 from preprocessor import Preprocessor
-from audiorecorder import AudioRecorder
-from video_analyze import VideoAnalyzer
+from audio import AudioRecorder
+from analyze import VideoAnalyzer
+from ioops import IOOperator
 from logger import Logger
 import logging
 
 class Platform:
-    def __init__(self, size: tuple[int, int]):
+    def __init__(self, size: tuple[int, int], init_conf: float = 0.1):
         SetLogLevel(-1)
         self.__size = size
+        self.__init_conf = init_conf
         self.__logger = Logger(level=logging.INFO)
-        self.__names = Names(logger = self.__logger)
+        self.__config_manager = WorkConfigManager(init_conf=self.__init_conf, logger = self.__logger)
         self.__writer = SerialWriter(logger = self.__logger, size=self.__size)
         self.__zoom = ZoomController(writer= self.__writer, logger = self.__logger, min_zoom=1.0, max_zoom=5.0, step=0.5, size = self.__size)
         self.__preprocessor = Preprocessor(use_clahe=False, use_bilateral=False)
-        self.__recorder = AudioRecorder(names=self.__names, zoom=self.__zoom, logger=self.__logger)
-        self.__analyzer = VideoAnalyzer(names=self.__names, zoom=self.__zoom, logger= self.__logger,
+        self.__recorder = AudioRecorder(config_manager=self.__config_manager, zoom=self.__zoom, logger=self.__logger)
+        
+        self.__io = IOOperator(self.__size, self.__zoom, self.__config_manager, logger=self.__logger)
+
+        self.__analyzer = VideoAnalyzer(io = self.__io, config_manager=self.__config_manager, 
+                                        zoom=self.__zoom, logger= self.__logger,
                                         serial_writer=self.__writer,
                                         preprocessor=self.__preprocessor,
-                                        size=self.__size)
+                                        imsize=self.__size, init_conf_score=self.__init_conf)
+        self.__io.analyzer = self.__analyzer
+        
+        self.__thread_classes = [self.__io, self.__analyzer, self.__recorder, self.__writer]
+        
         self.__threads = [
-            threading.Thread(target=self.__analyzer.start),
-            threading.Thread(target=self.__recorder.get_class),
-            threading.Thread(target=self.__writer.write_loop),
+            threading.Thread(target=c.start) for c in self.__thread_classes
         ]
 
     def run(self):
@@ -40,12 +48,12 @@ class Platform:
             if self.__logger:
                 self.__logger.info(f"\nОстановка: {e}")
         finally:
-            self.__names.set_to_work(False)
             self.__writer.stop()
+            self.__config_manager.stop()
             for t in self.__threads:
                 t.join(timeout=3)
             if self.__logger:
                 self.__logger.info("Завершено.")
 
 if __name__ == '__main__':
-    Platform((1280, 720)).run()
+    Platform((1920, 1080)).run()
