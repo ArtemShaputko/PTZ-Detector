@@ -1,7 +1,7 @@
 import cv2
 import time
 
-cap = cv2.VideoCapture(2, cv2.CAP_V4L2)
+cap = cv2.VideoCapture(2, cv2.CAP_FFMPEG)
 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
@@ -18,7 +18,7 @@ for _ in range(5):
     cap.read()
 
 start = time.time()
-for i in range(100):
+for i in range(1000):
     cap.read()
-print(f"Camera FPS: {100 / (time.time() - start):.1f}")
+print(f"Camera FPS: {1000 / (time.time() - start):.1f}")
 cap.release()
