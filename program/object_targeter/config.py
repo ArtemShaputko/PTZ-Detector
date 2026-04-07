@@ -1,22 +1,14 @@
+from interfaces import IWorkConfigManager, WorkConfig, ILogger
+
 import threading
 from ultralytics.utils.plotting import Colors
 import argostranslate.translate as translate
 from model_names import en_model_names
 import time
-from logger import Logger
-from dataclasses import dataclass
 
-@dataclass
-class WorkConfig:
-    names: dict[str, str]
-    names_updated: bool
-    conf: float
-    to_work: bool
-    
+class WorkConfigManager(IWorkConfigManager):
 
-class WorkConfigManager:
-
-    def __init__(self, init_conf: float, logger: Logger | None = None):
+    def __init__(self, init_conf: float, logger: ILogger | None = None):
         self.__translater = translate.get_translation_from_codes(from_code="ru", to_code="en")
         self.__colors = Colors()
         self.__names = {"": ""}
@@ -24,6 +16,7 @@ class WorkConfigManager:
         self.__to_work = True
         self.__lock = threading.Lock()
         self.__logger = logger
+        self.__target_track = None
 
         self.__updated: bool = True
 
@@ -54,13 +47,23 @@ class WorkConfigManager:
     @property
     def config(self):
         with self.__lock:
-            return WorkConfig(self.__names.copy(), self.__updated, self.__conf, self.__to_work)
+            return WorkConfig(self.__names.copy(), self.__updated, self.__conf, self.__target_track, self.__to_work)
         
     def update_names(self):
         with self.__lock:
             updated = self.__updated
             self.__updated = False
-            return WorkConfig(self.__names.copy(), updated, self.__conf, self.__to_work)
+            return WorkConfig(self.__names.copy(), updated, self.__conf, self.__target_track, self.__to_work)
+    
+    @property
+    def target_track(self):
+        with self.__lock:
+            return self.__target_track
+    
+    @target_track.setter
+    def target_track(self, target_track: int | None):
+        with self.__lock:
+            self.__target_track = target_track
     
     @property
     def conf(self):

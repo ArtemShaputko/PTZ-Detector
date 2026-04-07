@@ -15,7 +15,7 @@ class Platform:
         SetLogLevel(-1)
         self.__size = size
         self.__init_conf = init_conf
-        self.__logger = Logger(level=logging.INFO)
+        self.__logger = Logger(level=logging.DEBUG)
         self.__config_manager = WorkConfigManager(init_conf=self.__init_conf, logger = self.__logger)
         self.__writer = SerialWriter(logger = self.__logger, size=self.__size)
         self.__zoom = ZoomController(writer= self.__writer, logger = self.__logger, min_zoom=1.0, max_zoom=5.0, step=0.5, size = self.__size)

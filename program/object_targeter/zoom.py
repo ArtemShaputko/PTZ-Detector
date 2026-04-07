@@ -1,10 +1,9 @@
 import threading
 import cv2
-from serialwriter import SerialWriter
-from logger import Logger
+from interfaces import ISerialWriter, ILogger
 
 class ZoomController:
-    def __init__(self, writer: SerialWriter, size, logger: Logger | None = None, min_zoom=1.0, max_zoom=5.0, step=0.5):
+    def __init__(self, writer: ISerialWriter, size, logger: ILogger | None = None, min_zoom=1.0, max_zoom=5.0, step=0.5):
         self.__zoom = 10
         self.__init_size = size
         self.__cropped_size = size

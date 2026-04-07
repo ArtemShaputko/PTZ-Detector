@@ -4,26 +4,25 @@ import time
 import numpy as np
 import threading
 
-from config import WorkConfigManager, WorkConfig
-from serialwriter import SerialWriter
+from interfaces import IVideoAnalyzer, IWorkConfigManager, WorkConfig, ISerialWriter
+from interfaces import IZoomController, IPreprocessor, ILogger, IIOOperator
 from selector import ObjectSelector
-from zoom import ZoomController
-from preprocessor import Preprocessor
-from logger import Logger
+
 from smooth import SmoothingFilter
-from ioops import IOOperator
+
 from threadmanager import ThreadManager
 
 
-class VideoAnalyzer(ThreadManager):
+
+class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
     def __init__(self,
-                 io: IOOperator,
-                 config_manager: WorkConfigManager,
-                 zoom: ZoomController,
-                 serial_writer: SerialWriter,
-                 preprocessor: Preprocessor | None,
-                 logger: Logger | None = None,
-                 model_name: str ="yolov8x-worldv2.pt",
+                 io: IIOOperator,
+                 config_manager: IWorkConfigManager,
+                 zoom: IZoomController,
+                 serial_writer: ISerialWriter,
+                 preprocessor: IPreprocessor | None,
+                 logger: ILogger | None = None,
+                 model_name: str ="yolov8s-worldv2.pt",
                  imsize: tuple[int, int] = (1920, 1080),
                  model_imsize: tuple[int,int] | None = None,
                  init_conf_score: float=0.1):
@@ -31,12 +30,10 @@ class VideoAnalyzer(ThreadManager):
         
         self.__config_manager = config_manager
         self.__serial_writer = serial_writer
-        self.__selector = ObjectSelector()
         self.__smoother = SmoothingFilter(window=2)
         self.__zoom = zoom
         self.__preprocessor = preprocessor
         self.__logger = logger
-        self.__to_work = True
         if logger:
             logger.info(f"io image size: {imsize}, model image size: {model_imsize}")
         self.__imsize = imsize
@@ -94,7 +91,7 @@ class VideoAnalyzer(ThreadManager):
         if model_imsize:
             track_kwargs["imgsz"] = list(model_imsize)
 
-        while self.__to_work:
+        while not self._stop_event.is_set():
             config = self.__config_manager.update_names()
             
             if not self.__config_manager.to_work:
@@ -125,7 +122,7 @@ class VideoAnalyzer(ThreadManager):
             with self.__results_lock:
                 self.__model_results = model_results
 
-            coords = self.__selector.select(model_results)
+            coords = ObjectSelector.select(results=model_results, target=config.target_track)
             
             if coords:
                 coords = self.resize_coords(coords, model_imsize, imsize)
@@ -140,11 +137,9 @@ class VideoAnalyzer(ThreadManager):
             total_frames += 1
 
         self.__serial_writer.stop()
+        
         if self.__logger:
             elapsed = time.time() - record_start_time
             self.__logger.info(
                 f"Analyzer FPS average: {total_frames / elapsed:.1f}"
             )
-
-    def stop(self):
-        self.__to_work = False

@@ -1,6 +1,7 @@
 from collections import deque
+from interfaces import ISmoothingFilter
 
-class SmoothingFilter:
+class SmoothingFilter(ISmoothingFilter):
     def __init__(self, window: int = 4):
         self.__xs = deque(maxlen=window)
         self.__ys = deque(maxlen=window)

@@ -2,7 +2,9 @@ import logging
 import os
 from datetime import datetime
 
-class Logger:
+from interfaces import ILogger
+
+class Logger(ILogger):
     def __init__(self, log_dir: str = "logs", level = logging.DEBUG ):
         os.makedirs(log_dir, exist_ok=True)
         filename = os.path.join(log_dir,
@@ -12,7 +14,7 @@ class Logger:
             format="%(asctime)s [%(levelname)s] %(message)s",
             handlers=[
                 logging.FileHandler(filename),
-                logging.StreamHandler()  # дублируем в консоль
+                logging.StreamHandler()
             ]
         )
         self.__log = logging.getLogger("App")

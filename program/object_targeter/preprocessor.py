@@ -1,6 +1,7 @@
 import cv2
+from interfaces import IPreprocessor
 
-class Preprocessor:
+class Preprocessor(IPreprocessor):
     def __init__(self,
                  use_clahe: bool = True,
                  use_bilateral: bool = True,

@@ -1,32 +1,13 @@
-from dataclasses import dataclass
-from enum import Enum, auto
+from interfaces import ICommandParser, Command, CommandType
 
-
-class CommandType(Enum):
-    ZOOM_IN  = auto()
-    ZOOM_OUT = auto()
-    PLACE    = auto()
-    ADD      = auto()
-    SWITCH   = auto()
-    EXIT     = auto()
-    UNKNOWN  = auto()
-    CONF     = auto()
-
-
-@dataclass
-class Command:
-    type: CommandType
-    text: str = ""  # распознанный текст (для PLACE/ADD)
-
-
-class CommandParser:
+class CommandParser(ICommandParser):
     __ZOOM_IN  = ["приблизить", "приблизь", "увеличить"]
     __ZOOM_OUT = ["отдалить", "отдали", "уменьшить", "удалить", "удали"]
     __EXIT     = ["выйти", "выход", "стоп"]
     __PLACE    = ["найти", "найди", "поиск"]
     __ADD      = ["добавить", "добавь"]
-    __CONF      = ["уверенность", "уверен"]
-    __SWITCH   = ["переключить", "переключи"]
+    __CONF     = ["уверенность", "уверен"]
+    __FOLLOW   = ["следить", "следи"]
 
     def parse(self, text: str, to_add: bool = False) -> Command:
         text = text.strip().lower()
@@ -47,9 +28,9 @@ class CommandParser:
             if text.startswith(w):
                 return Command(CommandType.ADD, text=text[len(w):].strip())
             
-        for w in self.__SWITCH:
+        for w in self.__FOLLOW:
             if text.startswith(w):
-                return Command(CommandType.SWITCH, text=text[len(w):].strip())
+                return Command(CommandType.FOLLOW, text=text[len(w):].strip())
 
         for w in self.__CONF:
             if text.startswith(w):

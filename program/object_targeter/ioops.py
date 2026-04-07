@@ -6,9 +6,8 @@ import subprocess
 import numpy as np
 import tkinter as tk
 
-from config import WorkConfigManager, WorkConfig
-from zoom import ZoomController
-from logger import Logger
+from interfaces import IIOOperator, IZoomController, ILogger, IWorkConfigManager, WorkConfig, IAnalyzer
+
 import threading
 from ultralytics.engine.results import Results
 from threadmanager import ThreadManager
@@ -20,12 +19,14 @@ class Overlay:
     __FONT_SCALE = 0.7
     __SMALL_FONT_SCALE = 0.6
 
-    def draw(self, frame: np.ndarray, results: list[Results], config: WorkConfig, zoom_level: float,
-             target_idx: int = 0, colors_fn=None):
+    def draw(self, frame: np.ndarray, results: list[Results], config: WorkConfig, 
+             zoom_level: float, colors_fn=None):
         if not results or results[0].boxes is None:
             return frame
         
         boxes = results[0].boxes
+        ids = boxes.id
+        has_track = ids is not None
         fh, fw, _ = frame.shape
         oh, ow = results[0].orig_shape
         
@@ -33,9 +34,12 @@ class Overlay:
         keys = list(config.names.keys())
 
         cv2.putText(frame, f"Зум: x{zoom_level:.1f}", (10, 25),
-                    self.__FONT, self.__SMALL_FONT_SCALE, (255, 255, 0), 1)
+                    self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), 1)
         cv2.putText(frame, f"Уверенность: {config.conf*100:.0f}%", (10, 50),
                     self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), 1)
+        if config.target_track is not None:
+            cv2.putText(frame, f"{config.target_track} отслеживается", (10, 75),
+                        self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), 1)
 
         h = frame.shape[0]
         for i, name in enumerate(keys):
@@ -49,13 +53,13 @@ class Overlay:
             cls = int(boxes.cls[i].item())
 
             color = colors_fn(cls) if colors_fn else (0, 255, 0)
-            thickness = self.__TARGET_THICKNESS if i == target_idx \
+            thickness = self.__TARGET_THICKNESS if has_track and ids[i] == config.target_track \
                 else self.__NORMAL_THICKNESS
                 
             x1, y1, x2, y2 = int(x1*scale_x), int(y1 * scale_y), int(x2* scale_x), int(y2*scale_y)
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
-            label = f"{keys[cls]}, ув={conf*100:.0f}f"
+            label = f"{keys[cls]}, ув = {conf*100:.0f}%" + (f' id = {ids[i]}' if has_track else '')
             cv2.putText(frame, label, (x1, y1 - 8),
                         self.__FONT, self.__FONT_SCALE, color, thickness)
 
@@ -74,10 +78,10 @@ class Overlay:
         return canvas
 
 
-class IOOperator(ThreadManager):
+class IOOperator(ThreadManager, IIOOperator):
 
-    def __init__(self, size: tuple[int, int], zoom: ZoomController,
-                 config_manager: WorkConfigManager, logger: Logger | None):
+    def __init__(self, size: tuple[int, int], zoom: IZoomController,
+                 config_manager: IWorkConfigManager, logger: ILogger | None):
         super().__init__()
         
         self.__analyzer = None
@@ -90,7 +94,6 @@ class IOOperator(ThreadManager):
 
         self.__chunk = w * h * 3
 
-        # Latest RAW frame (before zoom) for VideoAnalyzer
         self.__latest_raw: np.ndarray | None = None
         self.__raw_lock = threading.Lock()
 
@@ -129,7 +132,7 @@ class IOOperator(ThreadManager):
         return self.__analyzer
     
     @analyzer.setter        
-    def analyzer(self, analyzer):
+    def analyzer(self, analyzer: IAnalyzer):
         self.__analyzer = analyzer
 
     def start(self):
@@ -145,7 +148,7 @@ class IOOperator(ThreadManager):
         cv2.setWindowProperty("Tracking", cv2.WND_PROP_FULLSCREEN,
                               cv2.WINDOW_FULLSCREEN)
 
-        while self.__running:
+        while not self._stop_event.is_set():
             raw = self.__proc.stdout.read(self.__chunk)
             if len(raw) < self.__chunk:
                 if self.__logger:
@@ -162,13 +165,12 @@ class IOOperator(ThreadManager):
             model_results = analyzer.get_results()
             config = self.__config_manager.config
             if not config.to_work:
-                self.stop()
+                self.__stop()
                 break
 
             display_frame = self.__overlay.draw(
                 display_frame, model_results, config,
                 self.__zoom.zoom / 10,
-                target_idx=0,
                 colors_fn=self.__config_manager.colors
             )
 
@@ -194,8 +196,9 @@ class IOOperator(ThreadManager):
         with self.__raw_lock:
             return self.__latest_raw.copy() if self.__latest_raw is not None else None
 
-    def stop(self):
-        self.__running = False
+    def __stop(self):
+        
+        self.stop()
 
         if self.__proc.stdout:
             if self.__logger:

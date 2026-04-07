@@ -1,13 +1,12 @@
-from abc import ABC, abstractmethod
+from interfaces import IThreadManager
 
-class ThreadManager(ABC):
+from abc import ABC, abstractmethod
+import threading
+
+class ThreadManager(IThreadManager, ABC):
     def __init__(self):
         super().__init__()
+        self._stop_event = threading.Event()
         
-    @abstractmethod
-    def start(self):
-        pass
-    
-    @abstractmethod
     def stop(self):
-        pass
+        self._stop_event.set()

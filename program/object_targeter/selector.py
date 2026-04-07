@@ -1,52 +1,44 @@
 import torch
-import threading
 from ultralytics.engine.results import Results, Boxes
+from interfaces import IObjectSelector
 
-class ObjectSelector:
-    def __init__(self):
-        self.__lock = threading.Lock
-        self.__target_class: int | None = None
-        
-    @property
-    def target_class(self):
-        with self.__lock:
-            return self.__target_class
+
+class ObjectSelector(IObjectSelector):
         
     @staticmethod
-    def is_target(boxes: Boxes, target: int | None) -> bool:
-        return boxes.is_track and target is not None and boxes.id == target
-        
-    def select_best(self, results: Results, target: int | None) -> tuple[int, int] | None:
-        best_box = None
-        best_conf = -1
-        
-        result = results[0]
-
-        for i in range(len(result)):
-            if self.is_target(result.boxes, target):
-                best_box = result.boxes.xyxy[i]
-                break
-            conf = result.boxes.conf[i].item()
-            if conf > best_conf:
-                best_conf = conf
-                best_box = result.boxes.xyxy[i]
-
-        if best_box is None:
+    def get_target(boxes: Boxes, target: int) -> torch.Tensor | None:
+        if boxes.id is None:
             return None
+        matched = boxes.xyxy[boxes.id == target]
+        return matched[0] if len(matched) else None
 
-        x1, y1, x2, y2 = best_box.to(torch.int).tolist()
-        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-        return cx, cy
-    
-    def select_first(self, results) -> tuple[int, int] | None:
+    @staticmethod
+    def select_best(results: list[Results]) -> tuple[int, int] | None:
         if not results or results[0].boxes is None or len(results[0].boxes) == 0:
             return None
-        best_box = results[0].boxes.xyxy[0]
-        x1, y1, x2, y2 = best_box.to(torch.int).tolist()
+        boxes = results[0].boxes
+        idx = boxes.conf.argmax()
+        x1, y1, x2, y2 = boxes.xyxy[idx].to(torch.int).tolist()
         return (x1 + x2) // 2, (y1 + y2) // 2
 
-    def select(self, results, type='first') -> tuple[int, int] | None:
-        coords = self.select_best(results) if type == 'best' else self.select_first(results)
-        if coords is None:
+    @staticmethod
+    def select_first(results: list[Results]) -> tuple[int, int] | None:
+        if not results or results[0].boxes is None or len(results[0].boxes) == 0:
             return None
-        return coords
+        x1, y1, x2, y2 = results[0].boxes.xyxy[0].to(torch.int).tolist()
+        return (x1 + x2) // 2, (y1 + y2) // 2
+
+    @staticmethod
+    def select(results: list[Results], mode: str = 'first',
+               target: int | None = None) -> tuple[int, int] | None:
+        if not results or results[0].boxes is None or len(results[0].boxes) == 0:
+            return None
+
+        if target is not None:
+            box = ObjectSelector.get_target(results[0].boxes, target)
+            if box is not None:
+                x1, y1, x2, y2 = box.to(torch.int).tolist()
+                return (x1 + x2) // 2, (y1 + y2) // 2
+
+        return ObjectSelector.select_best(results) if mode == 'best' \
+            else ObjectSelector.select_first(results)

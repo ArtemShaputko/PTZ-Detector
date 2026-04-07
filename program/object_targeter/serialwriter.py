@@ -2,14 +2,15 @@ import threading
 import time
 import serial
 from utils import get_distance, is_in_ellipse
-from logger import Logger
+from logger import ILogger
 from threadmanager import ThreadManager
+from interfaces import ISerialWriter
 
-class SerialWriter(ThreadManager):
-    def __init__(self, logger: Logger | None = None, size = (1920, 1080), notsend_zone_factor = 0.04):
+class SerialWriter(ThreadManager, ISerialWriter):
+    def __init__(self, logger: ILogger | None = None, size = (1920, 1080), notsend_zone_factor = 0.06):
         super().__init__()
         
-        self.__ser = serial.Serial('/dev/ttyUSB0', 115200)
+        self.__ser = serial.Serial('/dev/ttyUSB0', 9600)
         self.__size = size
         self.__screen_center = (size[0] // 2, size[1] // 2)
         self.__not_send_zone = (self.__size[0] * notsend_zone_factor, self.__size[1] * notsend_zone_factor)
@@ -19,7 +20,6 @@ class SerialWriter(ThreadManager):
         
         self.__lock = threading.Lock()
         self.__coords = None
-        self.__stop = threading.Event()
     
     @property 
     def not_send_zone(self):
@@ -36,9 +36,6 @@ class SerialWriter(ThreadManager):
             self.__screen_center = (size[0] // 2, size[1] // 2)
             self.__not_send_zone = (self.__size[0] * self.__notsend_zone_factor, self.__size[1] * self.__notsend_zone_factor)
         
-    def stop(self):
-        self.__stop.set()
-    
     @property
     def coords(self):
         with self.__lock:
@@ -53,7 +50,7 @@ class SerialWriter(ThreadManager):
         if self.__logger:
             self.__logger.info('SerialWriter Loop started')
         
-        while not self.__stop.is_set():
+        while not self._stop_event.is_set():
             data_to_send = None
             
             with self.__lock:
