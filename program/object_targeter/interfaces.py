@@ -83,6 +83,8 @@ class Command:
 
 class ICommandParser(ABC):
     @abstractmethod
+    def get_triggers(cls) -> list[str]: ...
+    @abstractmethod
     def parse(self, text: str, to_add: bool = False) -> Command: ...
 
 

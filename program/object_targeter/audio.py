@@ -67,12 +67,7 @@ class AudioRecorder(ThreadManager, IAudioRecorder):
         rec = vosk.KaldiRecognizer(self.__model, self.__fs)
         handled = False
 
-        TRIGGERS = ["найти", "найди", "поиск",
-                    "добавить", "добавь",
-                    "приблизить", "приблизь", "увеличить",
-                    "отдалить", "отдали", "уменьшить",
-                    "выйти", "выход", "стоп", "следить", "следи",
-                    "уверенность", "уверен"]
+        TRIGGERS = self.__parser.get_triggers()
 
         handled = False
 

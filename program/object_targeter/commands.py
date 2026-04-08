@@ -1,13 +1,17 @@
 from interfaces import ICommandParser, Command, CommandType
 
 class CommandParser(ICommandParser):
-    __ZOOM_IN  = ["приблизить", "приблизь", "увеличить"]
-    __ZOOM_OUT = ["отдалить", "отдали", "уменьшить", "удалить", "удали"]
+    __ZOOM_IN  = ["приблизить", "приблизь", "увеличить", "вперед", "вперёд"]
+    __ZOOM_OUT = ["отдалить", "отдали", "уменьшить", "удалить", "удали", "назад"]
     __EXIT     = ["выйти", "выход", "стоп"]
     __PLACE    = ["найти", "найди", "поиск"]
-    __ADD      = ["добавить", "добавь"]
-    __CONF     = ["уверенность", "уверен"]
-    __FOLLOW   = ["следить", "следи"]
+    __ADD      = ["добавить", "добавь", "плюс"]
+    __CONF     = ["уверенность", "уверен", "порог"]
+    __FOLLOW   = ["следить", "следи", "след"]
+    
+    @classmethod
+    def get_triggers(cls):
+        return cls.__ZOOM_IN + cls.__ZOOM_OUT + cls.__EXIT + cls.__PLACE + cls.__ADD + cls.__CONF + cls.__FOLLOW
 
     def parse(self, text: str, to_add: bool = False) -> Command:
         text = text.strip().lower()
