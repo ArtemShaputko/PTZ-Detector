@@ -1,8 +1,8 @@
 import threading
 import cv2
-from interfaces import ISerialWriter, ILogger
+from interfaces import ISerialWriter, ILogger, IZoomController
 
-class ZoomController:
+class ZoomController(IZoomController):
     def __init__(self, writer: ISerialWriter, size, logger: ILogger | None = None, min_zoom=1.0, max_zoom=5.0, step=0.5):
         self.__zoom = 10
         self.__init_size = size
