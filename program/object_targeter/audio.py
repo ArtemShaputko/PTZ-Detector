@@ -5,13 +5,12 @@ import json
 import time
 from ru_word2number import w2n
 
-from interfaces import IWorkConfigManager, IZoomController, CommandType, ILogger, IAudioRecorder
+from interfaces import IWorkConfigManager, IZoomController, CommandType, ICommandParser, ILogger, IAudioRecorder
 
-from commands import CommandParser
 from threadmanager import ThreadManager
 
 class AudioRecorder(ThreadManager, IAudioRecorder):
-    def __init__(self, config_manager: IWorkConfigManager, zoom: IZoomController,
+    def __init__(self, config_manager: IWorkConfigManager, zoom: IZoomController, parser: ICommandParser,
                  logger: ILogger | None = None,
                  model_name = "vosk-model-small-ru-0.22",
                  fs = 44100,
@@ -20,7 +19,7 @@ class AudioRecorder(ThreadManager, IAudioRecorder):
 
         self.__config_manager = config_manager
         self.__zoom = zoom
-        self.__parser = CommandParser()
+        self.__parser = parser
         self.__logger = logger
 
         self.__fs = fs

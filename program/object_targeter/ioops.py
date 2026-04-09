@@ -6,7 +6,7 @@ import subprocess
 import numpy as np
 import tkinter as tk
 
-from interfaces import IIOOperator, IZoomController, ILogger, IWorkConfigManager, WorkConfig, IAnalyzer
+from interfaces import IIOOperator, IZoomController, ILogger, IWorkConfigManager, WorkConfig, IAnalyzer 
 
 import threading
 from ultralytics.engine.results import Results
@@ -65,22 +65,10 @@ class Overlay:
 
         return frame
 
-    def fit_to_screen(self, frame, screen_w: int, screen_h: int):
-        fh, fw = frame.shape[:2]
-        scale = min(screen_w / fw, screen_h / fh)
-        new_w, new_h = int(fw * scale), int(fh * scale)
-        resized = cv2.resize(frame, (new_w, new_h))
-
-        canvas = np.zeros((screen_h, screen_w, 3), dtype=np.uint8)
-        y = (screen_h - new_h) // 2
-        x = (screen_w - new_w) // 2
-        canvas[y:y + new_h, x:x + new_w] = resized
-        return canvas
-
 
 class IOOperator(ThreadManager, IIOOperator):
 
-    def __init__(self, size: tuple[int, int], zoom: IZoomController,
+    def __init__(self, videodev: str, fps: int, size: tuple[int, int], zoom: IZoomController,
                  config_manager: IWorkConfigManager, logger: ILogger | None):
         super().__init__()
         
@@ -97,7 +85,6 @@ class IOOperator(ThreadManager, IIOOperator):
         self.__latest_raw: np.ndarray | None = None
         self.__raw_lock = threading.Lock()
 
-        self.__running = True
         self.__overlay = Overlay()
 
         root = tk.Tk()
@@ -106,14 +93,14 @@ class IOOperator(ThreadManager, IIOOperator):
         root.destroy()
 
         cmd = [
-            "ffmpeg", "-f", "v4l2", "-framerate", "30",
+            "ffmpeg", "-f", "v4l2", "-framerate", str(fps),
             "-video_size", f"{w}x{h}",
             "-input_format", "mjpeg",
             "-fflags", "+nobuffer+discardcorrupt",
             "-avioflags", "direct",
             "-flags", "+low_delay",
             "-thread_queue_size", "1",
-            "-i", "/dev/video2",
+            "-i", videodev,
             "-probesize", "32",
             "-analyzeduration", "0",
             "-pix_fmt", "bgr24", "-f", "rawvideo", "-"
@@ -125,7 +112,24 @@ class IOOperator(ThreadManager, IIOOperator):
         if self.__logger:
             self.__logger.info(f"Resolution: {w}x{h}, "
                                f"Screen: {self.__screen_w}x{self.__screen_h}")
+
+    def resize_to_window(self, frame: np.ndarray, win_name: str, min_delta: int = 12) -> np.ndarray:
+        rect = cv2.getWindowImageRect(win_name)
+        if not rect or rect[2] <= 0 or rect[3] <= 0:
+            return frame
+        
+        w, h = int(rect[2]), int(rect[3])
+        if not hasattr(self, '_win_sz'): self._win_sz = (0, 0)
+        if abs(w - self._win_sz[0]) < min_delta and abs(h - self._win_sz[1]) < min_delta:
+            w, h = self._win_sz
+        else:
+            self._win_sz = (w, h)
             
+        fh, fw = frame.shape[:2]
+        scale = min(w / fw, h / fh)
+        nw, nh = int(fw * scale), int(fh * scale)
+        interp = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LINEAR
+        return cv2.resize(frame, (nw, nh), interpolation=interp)
     
     @property        
     def analyzer(self):
@@ -143,10 +147,11 @@ class IOOperator(ThreadManager, IIOOperator):
         total_frames = 0
         record_start_time = time.time()
         w, h = self.__size
+        winname = "Tracking"
 
-        cv2.namedWindow("Tracking", cv2.WINDOW_NORMAL)
-        cv2.setWindowProperty("Tracking", cv2.WND_PROP_FULLSCREEN,
-                              cv2.WINDOW_FULLSCREEN)
+        cv2.namedWindow(winname, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(winname, w, h)  # начальный размер
+
 
         while not self._stop_event.is_set():
             raw = self.__proc.stdout.read(self.__chunk)
@@ -174,10 +179,8 @@ class IOOperator(ThreadManager, IIOOperator):
                 colors_fn=self.__config_manager.colors
             )
 
-            display_frame = self.__overlay.fit_to_screen(
-                display_frame, self.__screen_w, self.__screen_h
-            )
-            cv2.imshow("Tracking", display_frame)
+            display_frame = self.resize_to_window(display_frame, winname)
+            cv2.imshow(winname, display_frame)
             cv2.waitKey(1)
 
             total_frames += 1

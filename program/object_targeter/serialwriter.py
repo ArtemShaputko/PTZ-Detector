@@ -7,10 +7,10 @@ from threadmanager import ThreadManager
 from interfaces import ISerialWriter
 
 class SerialWriter(ThreadManager, ISerialWriter):
-    def __init__(self, logger: ILogger | None = None, size = (1920, 1080), notsend_zone_factor = 0.06):
+    def __init__(self, dev_name = '/dev/ttyUSB0',  baudrate = 9600, logger: ILogger | None = None, size = (1920, 1080), notsend_zone_factor = 0.06):
         super().__init__()
         
-        self.__ser = serial.Serial('/dev/ttyUSB0', 9600)
+        self.__ser = serial.Serial(dev_name, baudrate)
         self.__size = size
         self.__screen_center = (size[0] // 2, size[1] // 2)
         self.__not_send_zone = (self.__size[0] * notsend_zone_factor, self.__size[1] * notsend_zone_factor)

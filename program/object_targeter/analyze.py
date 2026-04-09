@@ -5,7 +5,7 @@ import numpy as np
 import threading
 
 from interfaces import IVideoAnalyzer, IWorkConfigManager, WorkConfig, ISerialWriter
-from interfaces import IZoomController, IPreprocessor, ILogger, IIOOperator
+from interfaces import IZoomController, ISmoothingFilter, ILogger, IIOOperator, IPreprocessor
 from selector import ObjectSelector
 
 from smooth import SmoothingFilter
@@ -20,6 +20,7 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
                  config_manager: IWorkConfigManager,
                  zoom: IZoomController,
                  serial_writer: ISerialWriter,
+                 smoother: ISmoothingFilter,
                  preprocessor: IPreprocessor | None,
                  logger: ILogger | None = None,
                  model_name: str ="yolov8s-worldv2.pt",
@@ -30,7 +31,7 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
         
         self.__config_manager = config_manager
         self.__serial_writer = serial_writer
-        self.__smoother = SmoothingFilter(window=2)
+        self.__smoother = smoother
         self.__zoom = zoom
         self.__preprocessor = preprocessor
         self.__logger = logger
