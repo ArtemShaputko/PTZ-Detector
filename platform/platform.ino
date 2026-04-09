@@ -1,9 +1,9 @@
 #include <Servo.h>
 
 constexpr char DELIMITER = ':';
-constexpr int OBJECT_ZONE = 3;
+constexpr int OBJECT_ZONE = 4;
 constexpr int MOVE_INTERVAL = 50;
-constexpr int MAX_STEP = 4;
+constexpr int MAX_STEP = 3;
 
 // ─── Pair ────────────────────────────────────────────────────────────────────
 
@@ -12,14 +12,13 @@ struct Pair
     int h;
     int v;
 };
-
 // ─── ServoController ─────────────────────────────────────────────────────────
 
 class ServoController
 {
 public:
-    ServoController(int pin, int initial_angle = 90)
-        : _pin(pin), _current(initial_angle), _target(initial_angle) {}
+    ServoController(int pin, int object_zone = OBJECT_ZONE, int low_angle = 180, int high_angle = 0, int initial_angle = 90)
+        : _pin(pin), _current(initial_angle), _target(initial_angle), _low_angle(low_angle), _high_angle(high_angle), _object_zone(object_zone) {}
 
     void attach()
     {
@@ -37,14 +36,14 @@ public:
     bool step()
     {
         int diff = _target - _current;
-        if (abs(diff) <= OBJECT_ZONE)
+        if (abs(diff) <= _object_zone)
             return false;
 
         int s = clamp(diff / 8, -MAX_STEP, MAX_STEP);
         if (s == 0)
             s = (diff > 0) ? 1 : -1;
 
-        _current = clamp(_current + s, 0, 180);
+        _current = clamp(_current + s, _low_angle, _high_angle);
         _servo.write(_current);
         return true;
     }
@@ -54,6 +53,9 @@ private:
     int _pin;
     int _current;
     int _target;
+    int _low_angle;
+    int _high_angle;
+    int _object_zone;
 
     static int clamp(int val, int lo, int hi)
     {
@@ -116,9 +118,9 @@ class CameraTracker
 {
 public:
     CameraTracker()
-        : _horizontal(HORIZONTAL_PIN),
-          _vertical(VERTICAL_PIN),
-          _calculator({58, 33}, {1920, 1080}),
+        : _horizontal(HORIZONTAL_PIN, int(OBJECT_ZONE * ratio) , LOW_ANGLES.h,  HIGH_ANGLES.h, 90),
+          _vertical(VERTICAL_PIN, int(OBJECT_ZONE / ratio), LOW_ANGLES.v, HIGH_ANGLES.v),
+          _calculator(FOVS, RES),
           _last_move(0) {}
 
     void setup()
@@ -147,6 +149,11 @@ public:
 private:
     static constexpr int HORIZONTAL_PIN = 4;
     static constexpr int VERTICAL_PIN = 3;
+    static inline constexpr Pair FOVS = {58, 33};
+    static inline constexpr Pair RES = {1920, 1080};
+    static inline constexpr float ratio = RES.h/RES.v;
+    static inline constexpr Pair LOW_ANGLES = {0, 39};
+    static inline constexpr Pair HIGH_ANGLES = {180, 140};
 
     ServoController _horizontal;
     ServoController _vertical;
@@ -161,7 +168,7 @@ CameraTracker tracker;
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(9600);
     tracker.setup();
 }
 
