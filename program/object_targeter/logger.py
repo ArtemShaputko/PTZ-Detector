@@ -5,7 +5,7 @@ from datetime import datetime
 from interfaces import ILogger
 
 class Logger(ILogger):
-    def __init__(self, log_dir: str = "logs", level = logging.DEBUG ):
+    def __init__(self, log_dir: str = "logs", level = logging.INFO ):
         os.makedirs(log_dir, exist_ok=True)
         filename = os.path.join(log_dir,
                     f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")

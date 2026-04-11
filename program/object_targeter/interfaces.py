@@ -3,6 +3,10 @@ import numpy as np
 from dataclasses import dataclass
 from enum import Enum, auto
 
+class IAngleCalculator(ABC):
+    @abstractmethod
+    def calculate(self, x: float, y: float) -> tuple[float, float]: ...
+
 class ILogger(ABC):
     @abstractmethod
     def trace(self, msg: str): ...

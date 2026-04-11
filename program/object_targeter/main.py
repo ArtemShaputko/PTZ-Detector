@@ -10,17 +10,19 @@ from ioops import IOOperator
 from logger import Logger
 from smooth import SmoothingFilter
 from commands import CommandParser
+from angle import AngleCalculator
 
 import logging
 
 class Platform:
-    def __init__(self, size: tuple[int, int], init_conf: float = 0.1):
+    def __init__(self, size: tuple[int, int], fov:tuple[int, int], init_conf: float = 0.1):
         SetLogLevel(-1)
         self.__size = size
         self.__init_conf = init_conf
-        self.__logger = Logger(level=logging.INFO)
+        self.__logger = Logger(level=logging.DEBUG)
         self.__config_manager = WorkConfigManager(init_conf=self.__init_conf, logger = self.__logger)
-        self.__writer = SerialWriter(logger = self.__logger, size=self.__size)
+        self.__calculator = AngleCalculator(fov, size)
+        self.__writer = SerialWriter(calculator=self.__calculator, logger = self.__logger, size=self.__size)
         self.__zoom = ZoomController(writer= self.__writer, logger = self.__logger, min_zoom=1.0, max_zoom=5.0, step=0.5, size = self.__size)
         self.__preprocessor = Preprocessor(use_clahe=False, use_bilateral=False)
         self.__parser = CommandParser()
@@ -61,4 +63,4 @@ class Platform:
                 self.__logger.info("Завершено.")
 
 if __name__ == '__main__':
-    Platform((1920, 1080)).run()
+    Platform((1920, 1080), (58, 33)).run()

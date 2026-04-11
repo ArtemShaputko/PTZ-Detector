@@ -3,16 +3,13 @@
 constexpr char DELIMITER = ':';
 constexpr int OBJECT_ZONE = 4;
 constexpr int MOVE_INTERVAL = 50;
-constexpr int MAX_STEP = 3;
-
-// ─── Pair ────────────────────────────────────────────────────────────────────
+constexpr int MAX_STEP = 4;
 
 struct Pair
 {
     int h;
     int v;
 };
-// ─── ServoController ─────────────────────────────────────────────────────────
 
 class ServoController
 {
@@ -39,7 +36,7 @@ public:
         if (abs(diff) <= _object_zone)
             return false;
 
-        int s = clamp(diff / 8, -MAX_STEP, MAX_STEP);
+        int s = clamp(diff / 12, -MAX_STEP, MAX_STEP);
         if (s == 0)
             s = (diff > 0) ? 1 : -1;
 
@@ -64,9 +61,7 @@ private:
     }
 };
 
-// ─── CoordParser ─────────────────────────────────────────────────────────────
-
-class CoordParser
+class AngleParser
 {
 public:
     bool read(Pair &out)
@@ -84,6 +79,7 @@ public:
         *delim = '\0';
         out.h = atoi(_buf);
         out.v = atoi(delim + 1);
+        Serial.write((String(out.h) + " -- " + out.v + "\n").c_str());
         return true;
     }
 
@@ -91,36 +87,12 @@ private:
     char _buf[32];
 };
 
-// ─── AngleCalculator ─────────────────────────────────────────────────────────
-
-class AngleCalculator
-{
-public:
-    AngleCalculator(Pair fov, Pair resolution)
-        : _fov(fov), _resolution(resolution) {}
-
-    int calculate(float coord, bool horizontal) const
-    {
-        float size = horizontal ? _resolution.h : _resolution.v;
-        float fov = horizontal ? _fov.h : _fov.v;
-        float bias = coord - size / 2.0f;
-        return int(bias * fov / size);
-    }
-
-private:
-    Pair _fov;
-    Pair _resolution;
-};
-
-// ─── CameraTracker ───────────────────────────────────────────────────────────
-
 class CameraTracker
 {
 public:
     CameraTracker()
-        : _horizontal(HORIZONTAL_PIN, int(OBJECT_ZONE * ratio) , LOW_ANGLES.h,  HIGH_ANGLES.h, 90),
-          _vertical(VERTICAL_PIN, int(OBJECT_ZONE / ratio), LOW_ANGLES.v, HIGH_ANGLES.v),
-          _calculator(FOVS, RES),
+        : _horizontal(HORIZONTAL_PIN, OBJECT_ZONE , LOW_ANGLES.h,  HIGH_ANGLES.h, 90),
+          _vertical(VERTICAL_PIN, OBJECT_ZONE, LOW_ANGLES.v, HIGH_ANGLES.v),
           _last_move(0) {}
 
     void setup()
@@ -134,8 +106,8 @@ public:
         Pair coords;
         if (_parser.read(coords))
         {
-            _horizontal.set_target(_horizontal.current() + _calculator.calculate(coords.h, true));
-            _vertical.set_target(_vertical.current() + _calculator.calculate(coords.v, false));
+            _horizontal.set_target(_horizontal.current() + coords.h);
+            _vertical.set_target(_vertical.current() + coords.v);
         }
 
         unsigned long now = millis();
@@ -149,20 +121,14 @@ public:
 private:
     static constexpr int HORIZONTAL_PIN = 4;
     static constexpr int VERTICAL_PIN = 3;
-    static inline constexpr Pair FOVS = {58, 33};
-    static inline constexpr Pair RES = {1920, 1080};
-    static inline constexpr float ratio = RES.h/RES.v;
     static inline constexpr Pair LOW_ANGLES = {0, 39};
     static inline constexpr Pair HIGH_ANGLES = {180, 140};
 
     ServoController _horizontal;
     ServoController _vertical;
-    CoordParser _parser;
-    AngleCalculator _calculator;
+    AngleParser _parser;
     unsigned long _last_move;
 };
-
-// ─── main ────────────────────────────────────────────────────────────────────
 
 CameraTracker tracker;
 

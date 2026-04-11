@@ -19,6 +19,9 @@ for _ in range(5):
 
 start = time.time()
 for i in range(1000):
-    cap.read()
+    frame = cap.read()
+    cv2.imshow("test", frame)
+    cv2.waitKey(1)
+    
 print(f"Camera FPS: {1000 / (time.time() - start):.1f}")
 cap.release()

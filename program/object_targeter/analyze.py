@@ -8,11 +8,7 @@ from interfaces import IVideoAnalyzer, IWorkConfigManager, WorkConfig, ISerialWr
 from interfaces import IZoomController, ISmoothingFilter, ILogger, IIOOperator, IPreprocessor
 from selector import ObjectSelector
 
-from smooth import SmoothingFilter
-
 from threadmanager import ThreadManager
-
-
 
 class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
     def __init__(self,
@@ -23,7 +19,7 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
                  smoother: ISmoothingFilter,
                  preprocessor: IPreprocessor | None,
                  logger: ILogger | None = None,
-                 model_name: str ="yolov8s-worldv2.pt",
+                 model_name: str ="yolov8m-worldv2.pt",
                  imsize: tuple[int, int] = (1920, 1080),
                  model_imsize: tuple[int,int] | None = None,
                  init_conf_score: float=0.1):
@@ -51,12 +47,13 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
         self.__io = io
         
     def get_results(self):
-        """Возвращает последние results модели. Без копирования — только чтение bbox."""
         with self.__results_lock:
             return self.__model_results
 
     def __set_classes(self, config: WorkConfig):
         if config.names_updated:
+            with self.__results_lock:
+                self.__model_results = None
             start_time = time.time()
             self.__model.model.clip_model = None
             self.__model.set_classes(config.names.values())
@@ -109,7 +106,6 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
                     self.__logger.trace("Frame is None")
                 continue
             
-            frame = self.__zoom.apply(frame)
             frame = self.resize_frame(frame, model_imsize, imsize)
             
             preprocessed = frame
@@ -127,12 +123,11 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
             
             if coords:
                 coords = self.resize_coords(coords, model_imsize, imsize)
-                coords = self.__zoom.to_original_coords(coords[0], coords[1])
-                coords = (self.__imsize[0] - coords[0], coords[1])
-                coords = self.__smoother.update(coords)
+                zoomed_coords = self.__zoom.to_original_coords(coords[0], coords[1])
+                coords = self.__smoother.update(zoomed_coords)
 
                 if self.__logger:
-                    self.__logger.trace(f"Video sends coords: {coords}")
+                    self.__logger.trace(f"Video sends coords: {coords}, zoom: {zoomed_coords}")
                 self.__serial_writer.coords = coords
 
             total_frames += 1

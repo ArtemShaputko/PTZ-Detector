@@ -1,10 +1,10 @@
 from interfaces import ICommandParser, Command, CommandType
 
 class CommandParser(ICommandParser):
-    __ZOOM_IN  = ["приблизить", "приблизь", "увеличить", "вперед", "вперёд"]
-    __ZOOM_OUT = ["отдалить", "отдали", "уменьшить", "удалить", "удали", "назад"]
+    __ZOOM_IN  = ["приблизить", "приблизь", "увеличить", "вперед", "вперёд", "перед", "перёд"]
+    __ZOOM_OUT = ["отдалить", "отдали", "уменьшить", "удалить", "удали", "назад", "зад"]
     __EXIT     = ["выйти", "выход", "стоп"]
-    __PLACE    = ["найти", "найди", "поиск"]
+    __PLACE    = ["найти", "найди", "поиск", "искать", "ищи"]
     __ADD      = ["добавить", "добавь", "плюс"]
     __CONF     = ["уверенность", "уверен", "порог"]
     __FOLLOW   = ["следить", "следи", "след"]
@@ -23,7 +23,6 @@ class CommandParser(ICommandParser):
         if any(w in text for w in self.__EXIT):
             return Command(CommandType.EXIT)
 
-        # голосовые префиксы — определяют тип и обрезают ключевое слово
         for w in self.__PLACE:
             if text.startswith(w):
                 return Command(CommandType.PLACE, text=text[len(w):].strip())

@@ -13,15 +13,30 @@ from ultralytics.engine.results import Results
 from threadmanager import ThreadManager
 
 class Overlay:
+    __TEXT_THICKNESS = 2
     __NORMAL_THICKNESS = 2
-    __TARGET_THICKNESS = 4
+    __TARGET_THICKNESS = 5
     __FONT = cv2.FONT_HERSHEY_COMPLEX
-    __FONT_SCALE = 0.7
-    __SMALL_FONT_SCALE = 0.6
+    __FONT_SCALE = 1
+    __SMALL_FONT_SCALE = 0.7
 
     def draw(self, frame: np.ndarray, results: list[Results], config: WorkConfig, 
              zoom_level: float, colors_fn=None):
+        
+        h = frame.shape[0]
+    
+        cv2.putText(frame, f"Зум: x{zoom_level:.1f}", (10, 25),
+                    self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), self.__TEXT_THICKNESS)
+        cv2.putText(frame, f"Уверенность: {config.conf*100:.0f}%", (10, 50),
+                    self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), self.__TEXT_THICKNESS)
+        if config.target_track is not None:
+            cv2.putText(frame, f"{config.target_track} отслеживается", (10, 75),
+                        self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), self.__TEXT_THICKNESS)
+            
         if not results or results[0].boxes is None:
+            cv2.putText(frame, "Загрузка классов", (10, h - 10),
+                self.__FONT, self.__SMALL_FONT_SCALE,
+                (0, 0, 255), self.__TEXT_THICKNESS)
             return frame
         
         boxes = results[0].boxes
@@ -33,19 +48,10 @@ class Overlay:
         scale_y, scale_x = fh/oh, fw/ow
         keys = list(config.names.keys())
 
-        cv2.putText(frame, f"Зум: x{zoom_level:.1f}", (10, 25),
-                    self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), 1)
-        cv2.putText(frame, f"Уверенность: {config.conf*100:.0f}%", (10, 50),
-                    self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), 1)
-        if config.target_track is not None:
-            cv2.putText(frame, f"{config.target_track} отслеживается", (10, 75),
-                        self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), 1)
-
-        h = frame.shape[0]
         for i, name in enumerate(keys):
             cv2.putText(frame, name, (10, h - 10 - i * 15),
                         self.__FONT, self.__SMALL_FONT_SCALE,
-                        (255, 0, 255), 1)
+                        (255, 0, 128), self.__TEXT_THICKNESS)
 
         for i in range(len(boxes)):
             x1, y1, x2, y2 = boxes.xyxy[i].to(torch.int).tolist()
@@ -61,7 +67,7 @@ class Overlay:
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
             label = f"{keys[cls]}, ув = {conf*100:.0f}%" + (f' id = {ids[i]}' if has_track else '')
             cv2.putText(frame, label, (x1, y1 - 8),
-                        self.__FONT, self.__FONT_SCALE, color, thickness)
+                        self.__FONT, self.__FONT_SCALE, color, self.__TEXT_THICKNESS)
 
         return frame
 
@@ -161,25 +167,30 @@ class IOOperator(ThreadManager, IIOOperator):
                 break
 
             frame = np.frombuffer(raw, dtype=np.uint8).reshape(h, w, 3).copy()
+            frame = self.__zoom.apply(frame)
 
             with self.__raw_lock:
                 self.__latest_raw = frame
-
-            display_frame = self.__zoom.apply(frame)
 
             model_results = analyzer.get_results()
             config = self.__config_manager.config
             if not config.to_work:
                 self.__stop()
                 break
+            
+            try:
 
-            display_frame = self.__overlay.draw(
-                display_frame, model_results, config,
-                self.__zoom.zoom / 10,
-                colors_fn=self.__config_manager.colors
-            )
+                display_frame = self.__overlay.draw(
+                    frame, model_results, config,
+                    self.__zoom.zoom / 10,
+                    colors_fn=self.__config_manager.colors
+                )
+            except Exception as e:
+                if self.__logger:
+                    self.__logger.warning(f"Skipping drawing frame: {e}")
+                display_frame = frame
 
-            display_frame = self.resize_to_window(display_frame, winname)
+#            display_frame = self.resize_to_window(display_frame, winname)
             cv2.imshow(winname, display_frame)
             cv2.waitKey(1)
 
@@ -195,7 +206,6 @@ class IOOperator(ThreadManager, IIOOperator):
         cv2.destroyAllWindows()
 
     def get_latest_raw(self) -> np.ndarray | None:
-        """Возвращает копию последнего RAW кадра для модели."""
         with self.__raw_lock:
             return self.__latest_raw.copy() if self.__latest_raw is not None else None
 
