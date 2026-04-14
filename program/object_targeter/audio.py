@@ -52,6 +52,8 @@ class AudioRecorder(ThreadManager, IAudioRecorder):
             self.__config_manager.stop()
         elif command.type == CommandType.ADD:
             self.__config_manager.add(command.text)
+        elif command.type == CommandType.REMOVE:
+            self.__config_manager.remove_last()
         elif command.type == CommandType.PLACE:
             self.__config_manager.place(command.text)
         elif command.type == CommandType.FOLLOW:

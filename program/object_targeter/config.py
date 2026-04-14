@@ -11,7 +11,7 @@ class WorkConfigManager(IWorkConfigManager):
     def __init__(self, init_conf: float, logger: ILogger | None = None):
         self.__translater = translate.get_translation_from_codes(from_code="ru", to_code="en")
         self.__colors = Colors()
-        self.__names = {"": ""}
+        self.__names = {}
         self.__conf = init_conf
         self.__to_work = True
         self.__lock = threading.Lock()
@@ -43,6 +43,11 @@ class WorkConfigManager(IWorkConfigManager):
             with self.__lock:
                 self.__names[ru_text] = en_text
                 self.__updated = True
+                
+    def remove_last(self):
+        with self.__lock:
+            self.__names.popitem()
+            self.__updated = True
 
     @property
     def config(self):

@@ -6,12 +6,13 @@ class CommandParser(ICommandParser):
     __EXIT     = ["выйти", "выход", "стоп"]
     __PLACE    = ["найти", "найди", "поиск", "искать", "ищи"]
     __ADD      = ["добавить", "добавь", "плюс"]
+    __REMOVE   = ["удалить", "убрать", "минус"]
     __CONF     = ["уверенность", "уверен", "порог"]
     __FOLLOW   = ["следить", "следи", "след"]
     
     @classmethod
     def get_triggers(cls):
-        return cls.__ZOOM_IN + cls.__ZOOM_OUT + cls.__EXIT + cls.__PLACE + cls.__ADD + cls.__CONF + cls.__FOLLOW
+        return cls.__ZOOM_IN + cls.__ZOOM_OUT + cls.__EXIT + cls.__PLACE + cls.__ADD + cls.__CONF + cls.__FOLLOW + cls.__REMOVE
 
     def parse(self, text: str, to_add: bool = False) -> Command:
         text = text.strip().lower()
@@ -22,6 +23,8 @@ class CommandParser(ICommandParser):
             return Command(CommandType.ZOOM_OUT)
         if any(w in text for w in self.__EXIT):
             return Command(CommandType.EXIT)
+        if any(w in text for w in self.__REMOVE):
+            return Command(CommandType.REMOVE)
 
         for w in self.__PLACE:
             if text.startswith(w):

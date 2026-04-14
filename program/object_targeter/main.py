@@ -19,7 +19,7 @@ class Platform:
         SetLogLevel(-1)
         self.__size = size
         self.__init_conf = init_conf
-        self.__logger = Logger(level=logging.DEBUG)
+        self.__logger = Logger(level=logging.INFO)
         self.__config_manager = WorkConfigManager(init_conf=self.__init_conf, logger = self.__logger)
         self.__calculator = AngleCalculator(fov, size)
         self.__writer = SerialWriter(calculator=self.__calculator, logger = self.__logger, size=self.__size)

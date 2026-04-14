@@ -56,12 +56,20 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
                 self.__model_results = None
             start_time = time.time()
             self.__model.model.clip_model = None
-            self.__model.set_classes(config.names.values())
-            if self.__logger:
-                self.__logger.info(
-                    f"Classes changed: {list(config.names.keys())} "
-                    f"in {time.time() - start_time:.2f}s"
-                )
+            if config.names:
+                self.__model.set_classes(config.names.values())
+                if self.__logger:
+                    self.__logger.info(
+                        f"Classes changed: {list(config.names.keys())} "
+                        f"in {time.time() - start_time:.2f}s"
+                    )
+            else:
+                self.__model.set_classes([''])
+                if self.__logger:
+                    self.__logger.info(
+                        f"Classes removed all "
+                        f"in {time.time() - start_time:.2f}s"
+                    )
     
     @staticmethod
     def resize_frame(frame: np.ndarray, model_imsize: tuple[int,int] | None, imsize: tuple[int,int]) -> np.ndarray:

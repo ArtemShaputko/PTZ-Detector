@@ -33,6 +33,9 @@ class IWorkConfigManager(ABC):
 
     @abstractmethod
     def add(self, ru_text: str): ...
+    
+    @abstractmethod
+    def remove_last(self): ...
 
     @property
     @abstractmethod
@@ -75,6 +78,7 @@ class CommandType(Enum):
     ZOOM_OUT = auto()
     PLACE    = auto()
     ADD      = auto()
+    REMOVE   = auto()
     FOLLOW   = auto()
     EXIT     = auto()
     UNKNOWN  = auto()

@@ -34,7 +34,7 @@ class Overlay:
                         self.__FONT, self.__SMALL_FONT_SCALE, (0, 255, 255), self.__TEXT_THICKNESS)
             
         if not results or results[0].boxes is None:
-            cv2.putText(frame, "Загрузка классов", (10, h - 10),
+            cv2.putText(frame, "Загрузка", (10, h - 10),
                 self.__FONT, self.__SMALL_FONT_SCALE,
                 (0, 0, 255), self.__TEXT_THICKNESS)
             return frame
@@ -49,7 +49,7 @@ class Overlay:
         keys = list(config.names.keys())
 
         for i, name in enumerate(keys):
-            cv2.putText(frame, name, (10, h - 10 - i * 15),
+            cv2.putText(frame, name, (10, h - 10 - i * 20),
                         self.__FONT, self.__SMALL_FONT_SCALE,
                         (255, 0, 128), self.__TEXT_THICKNESS)
 
@@ -75,7 +75,8 @@ class Overlay:
 class IOOperator(ThreadManager, IIOOperator):
 
     def __init__(self, videodev: str, fps: int, size: tuple[int, int], zoom: IZoomController,
-                 config_manager: IWorkConfigManager, logger: ILogger | None):
+                 config_manager: IWorkConfigManager, logger: ILogger | None,
+                 show_size: tuple[int, int] | None = (1280, 720)):
         super().__init__()
         
         self.__analyzer = None
@@ -92,6 +93,8 @@ class IOOperator(ThreadManager, IIOOperator):
         self.__raw_lock = threading.Lock()
 
         self.__overlay = Overlay()
+        
+        self.__show_size = show_size
 
         root = tk.Tk()
         self.__screen_w = root.winfo_screenwidth()
@@ -153,10 +156,12 @@ class IOOperator(ThreadManager, IIOOperator):
         total_frames = 0
         record_start_time = time.time()
         w, h = self.__size
+        
+        sw, sh = self.__show_size if self.__show_size else (self.__screen_w, self.__screen_h)
         winname = "Tracking"
 
         cv2.namedWindow(winname, cv2.WINDOW_NORMAL)
-        cv2.resizeWindow(winname, w, h)  # начальный размер
+        cv2.resizeWindow(winname, sw, sh)
 
 
         while not self._stop_event.is_set():
