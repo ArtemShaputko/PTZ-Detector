@@ -8,7 +8,8 @@ Servo vert;
 
 void setup() {
   horiz.attach(HORIZONTAL_PIN, 550, 2450);
-  vert.attach(VERTICAL_PIN, 550, 2450);
+  vert.attach(VERTICAL_PIN);
+  // vert.attach(VERTICAL_PIN, 550, 2450);
   Serial.begin(115200);
   //   // left
   // for(int i = 45; i >= 0; i--) {
@@ -35,13 +36,11 @@ void setup() {
   //   delay(1000); 
   //   Serial.println(String("Bottom ") + i);
   // } // 168
-  vert.writeMicroseconds(1500);
-  for(int i = 1500; i >= 1000; i--) {
-    vert.writeMicroseconds(i);
-    Serial.println(String("Bottom ") + i);
-  } // 1000 2250
+  vert.write(90);
+  Serial.println(String("Bottom ") + 90);
+
 }
 
 void loop() {
-  delay(10000);
+  delay(1500);
 }

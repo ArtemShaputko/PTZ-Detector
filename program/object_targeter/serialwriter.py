@@ -9,7 +9,7 @@ from interfaces import ISerialWriter, IAngleCalculator
 class SerialWriter(ThreadManager, ISerialWriter):
     def __init__(self, calculator: IAngleCalculator, dev_name = '/dev/ttyUSB0',  baudrate = 9600,
                  logger: ILogger | None = None,
-                 size = (1920, 1080), notsend_zone_factor = 0.3):
+                 size = (1920, 1080), notsend_zone_factor = 0.1):
         super().__init__()
         
         self.__calculator = calculator
@@ -76,7 +76,7 @@ class SerialWriter(ThreadManager, ISerialWriter):
                     self.__ser.reset_input_buffer()
                     self.__ser.write(data_to_send.encode('utf-8'))
                     self.__ser.flush()
-                    time.sleep(0.025) 
+                    time.sleep(0.015) 
                 except Exception as e:
                     if self.__logger:
                         self.__logger.error(f"Serial Write Error: {e}")
