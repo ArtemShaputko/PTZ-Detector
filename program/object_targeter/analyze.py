@@ -4,7 +4,7 @@ import time
 import numpy as np
 import threading
 
-from interfaces import IVideoAnalyzer, IWorkConfigManager, WorkConfig, ISerialWriter
+from interfaces import IVideoAnalyzer, IWorkConfigManager, WorkConfig, ISerialWriter, IObjectSelector
 from interfaces import IZoomController, ISmoothingFilter, ILogger, IIOOperator, IPreprocessor
 from selector import ObjectSelector
 
@@ -17,6 +17,7 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
                  zoom: IZoomController,
                  serial_writer: ISerialWriter,
                  smoother: ISmoothingFilter,
+                 selector: IObjectSelector,
                  preprocessor: IPreprocessor | None,
                  logger: ILogger | None = None,
                  model_name: str ="yolov8m-worldv2.pt",
@@ -31,6 +32,7 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
         self.__zoom = zoom
         self.__preprocessor = preprocessor
         self.__logger = logger
+        self.__selector = selector
         if logger:
             logger.info(f"io image size: {imsize}, model image size: {model_imsize}")
         self.__imsize = imsize
@@ -43,6 +45,8 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
         self.__model.to('cuda')
 
         self.__conf_score = init_conf_score
+        
+        self.__lost_track_max = 5
 
         self.__io = io
         
@@ -55,6 +59,8 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
             with self.__results_lock:
                 self.__model_results = None
             start_time = time.time()
+            if self.__model.predictor:
+                self.__model.predictor.trackers[0].reset()
             self.__model.model.clip_model = None
             if config.names:
                 self.__model.set_classes(config.names.values())
@@ -127,7 +133,7 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
             with self.__results_lock:
                 self.__model_results = model_results
 
-            coords = ObjectSelector.select(results=model_results, target=config.target_track)
+            coords = self.__selector.select(results=model_results, target=config.target_track)
             
             if coords:
                 coords = self.resize_coords(coords, model_imsize, imsize)

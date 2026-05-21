@@ -1,4 +1,5 @@
 #include <Servo.h>
+#include <math.h>
 
 constexpr char DELIMITER = ':';
 constexpr int OBJECT_ZONE = 1;    // мёртвая зона в градусах
@@ -7,7 +8,7 @@ constexpr int MOVE_INTERVAL = 10; // мс между обновлениями с
 // 360° серво: 1500 мкс = стоп, <1500 = одна сторона, >1500 = другая
 constexpr int STOP_US = 1500;
 constexpr int MAX_SPEED_US = 200; // макс. отклонение от 1500 (диапазон 1300–1700)
-constexpr int MIN_SPEED_US = 50;  // минимум чтобы мотор тронулся
+constexpr int MIN_SPEED_US = 25;  // минимум чтобы мотор тронулся
 
 struct Pair
 {
@@ -19,8 +20,10 @@ struct Pair
 class ServoController360
 {
 public:
-    ServoController360(int pin, int object_zone = OBJECT_ZONE)
-        : _pin(pin), _error(0), _speed_current(0.0f), _object_zone(object_zone) {}
+    ServoController360(int pin, int object_zone = OBJECT_ZONE, float asym = 1)
+        : _pin(pin), _error(0), _speed_current(0.0f), _object_zone(object_zone),
+        _asym(asym), _cf((1+_asym) / 2), _min_speed_pos(MIN_SPEED_US), _min_speed_neg(MIN_SPEED_US),
+        _max_speed_pos(MAX_SPEED_US * asym), _max_speed_neg(MAX_SPEED_US / asym) {}
 
     void attach()
     {
@@ -31,7 +34,7 @@ public:
     void add_error(int delta)
     {
         // Сглаживаем входящие данные
-        _error = (int)(_error * 0.6f + (_error + delta) * 0.4f);
+        _error = (int)(_error * 0.6f + delta * 0.4f);
     }
 
     int error() const { return _error; }
@@ -51,13 +54,20 @@ public:
             return true;
         }
 
-        float speed_target = (float)clamp(_error * _err_mult, -MAX_SPEED_US, MAX_SPEED_US);
+        float speed_target = (float)clamp((float)_error * _err_mult, -_max_speed_neg, _max_speed_pos);
+        float alpha_coef = _alpha;
 
-        if (speed_target > 0 && speed_target <  MIN_SPEED_US) speed_target =  MIN_SPEED_US;
-        if (speed_target < 0 && speed_target > -MIN_SPEED_US) speed_target = -MIN_SPEED_US;
+        if (speed_target > 0) {
+            alpha_coef *= _cf;
+            if (speed_target <  _min_speed_pos) speed_target = _min_speed_pos;
+        }
+        if (speed_target < 0) {
+            alpha_coef /= _cf;
+            if ( speed_target > -_min_speed_neg) speed_target = -_min_speed_neg;
+        }
 
         // Low-pass фильтр скорости
-        _speed_current = _speed_current * (1.0f - _alpha) + speed_target * _alpha;
+        _speed_current = _speed_current * (1.0f - alpha_coef) + speed_target * alpha_coef;
 
         _servo.writeMicroseconds(STOP_US + (int)_speed_current);
         _error -= (int)_speed_current / _err_mult;
@@ -77,10 +87,17 @@ private:
     int    _error;
     float  _speed_current;
     int    _object_zone;
+    float  _min_speed_pos;
+    float  _min_speed_neg;
+    float  _max_speed_pos;
+    float  _max_speed_neg;
     int    _err_mult = 20;
-    float  _alpha    = 0.6f; // плавность: 0.1–0.5
+    float  _alpha    = 0.3f; // плавность: 0.1–0.5
+    float  _cf    = 1; // плавность: 0.1–0.5
+    float  _asym = 1;
 
-    static int clamp(int val, int lo, int hi)
+    template<class T>
+    static T clamp(T val, T lo, T hi)
     {
         return (val < lo) ? lo : (val > hi) ? hi : val;
     }
@@ -121,7 +138,7 @@ class CameraTracker
 public:
     CameraTracker()
         : _horizontal(HORIZONTAL_PIN, OBJECT_ZONE),
-          _vertical(VERTICAL_PIN, OBJECT_ZONE),
+          _vertical(VERTICAL_PIN, OBJECT_ZONE, 0.2),
           _last_move(0) {}
 
     void setup()

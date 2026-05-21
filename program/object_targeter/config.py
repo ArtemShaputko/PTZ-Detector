@@ -45,9 +45,13 @@ class WorkConfigManager(IWorkConfigManager):
                 self.__updated = True
                 
     def remove_last(self):
-        with self.__lock:
-            self.__names.popitem()
-            self.__updated = True
+        try:
+            with self.__lock:
+                self.__names.popitem()
+                self.__updated = True
+        except KeyError as e:
+            if self.__logger:
+                self.__logger.warning(e)
 
     @property
     def config(self):
@@ -68,7 +72,7 @@ class WorkConfigManager(IWorkConfigManager):
     @target_track.setter
     def target_track(self, target_track: int | None):
         with self.__lock:
-            self.__target_track = target_track
+            self.__target_track = target_track if target_track and target_track > 0 else None
     
     @property
     def conf(self):

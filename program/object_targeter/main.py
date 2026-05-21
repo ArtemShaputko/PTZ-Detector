@@ -11,6 +11,7 @@ from logger import Logger
 from smooth import SmoothingFilter
 from commands import CommandParser
 from angle import AngleCalculator
+from selector import ObjectSelector
 
 import logging
 
@@ -29,12 +30,13 @@ class Platform:
         self.__recorder = AudioRecorder(config_manager=self.__config_manager, zoom=self.__zoom, parser=self.__parser, logger=self.__logger)
         
         self.__io = IOOperator("/dev/video2", 30, self.__size, self.__zoom, self.__config_manager, logger=self.__logger)
-        self.__smoother = SmoothingFilter(window=2)
+        self.__smoother = SmoothingFilter(window=1)
+        self.__selector = ObjectSelector(max_target_wait=10)
 
         self.__analyzer = VideoAnalyzer(io = self.__io, config_manager=self.__config_manager, 
                                         zoom=self.__zoom, logger= self.__logger,
                                         serial_writer=self.__writer, smoother= self.__smoother,
-                                        preprocessor=self.__preprocessor,
+                                        preprocessor=self.__preprocessor, selector= self.__selector,
                                         imsize=self.__size, init_conf_score=self.__init_conf)
         self.__io.analyzer = self.__analyzer
         
