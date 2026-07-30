@@ -6,8 +6,7 @@ import threading
 
 from interfaces import IVideoAnalyzer, IWorkConfigManager, WorkConfig, ISerialWriter, IObjectSelector
 from interfaces import IZoomController, ISmoothingFilter, ILogger, IIOOperator, IPreprocessor
-from selector import ObjectSelector
-
+    
 from threadmanager import ThreadManager
 
 class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
@@ -20,7 +19,7 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
                  selector: IObjectSelector,
                  preprocessor: IPreprocessor | None,
                  logger: ILogger | None = None,
-                 model_name: str ="yolov8m-worldv2.pt",
+                 model_name: str ="models/yolov8m-worldv2.pt",
                  imsize: tuple[int, int] = (1920, 1080),
                  model_imsize: tuple[int,int] | None = None,
                  init_conf_score: float=0.1):
@@ -46,8 +45,6 @@ class VideoAnalyzer(ThreadManager, IVideoAnalyzer):
 
         self.__conf_score = init_conf_score
         
-        self.__lost_track_max = 5
-
         self.__io = io
         
     def get_results(self):
